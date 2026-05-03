@@ -9,9 +9,17 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
+    "firebase": "^12.12.1",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^1.14.0",
     "next": "16.2.4",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-firebase-hooks": "^5.1.1",
+    "react-hot-toast": "^2.6.0",
+    "react-leaflet": "^5.0.0",
+    "recharts": "^3.8.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
