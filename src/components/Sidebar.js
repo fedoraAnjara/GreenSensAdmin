@@ -20,9 +20,9 @@ export default function Sidebar() {
   const { t } = useLanguage();
 
   const navItems = [
-    { href: "/", label: t.sidebar.dashboard, icon: LayoutDashboard },
-    { href: "/utilisateurs", label: t.sidebar.users, icon: Users },
-    { href: "/agriculteurs", label: t.sidebar.farmers, icon: Tractor },
+    { href: "/dashboard", label: t.sidebar.dashboard, icon: LayoutDashboard },
+    { href: "/dashboard/utilisateurs", label: t.sidebar.users, icon: Users },
+    { href: "/dashboard/agriculteurs", label: t.sidebar.farmers, icon: Tractor },
     { href: "/carte", label: t.sidebar.map, icon: Map },
     { href: "/emails", label: t.sidebar.emails, icon: Mail },
     { href: "/statistiques", label: t.sidebar.statistics, icon: BarChart2 },
