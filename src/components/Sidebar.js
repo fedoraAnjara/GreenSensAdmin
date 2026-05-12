@@ -25,7 +25,7 @@ export default function Sidebar() {
     { href: "/dashboard/agriculteurs", label: t.sidebar.farmers, icon: Tractor },
     { href: "/dashboard/carte", label: t.sidebar.map, icon: Map },
     { href: "/dashboard/emails", label: t.sidebar.emails, icon: Mail },
-    { href: "/statistiques", label: t.sidebar.statistics, icon: BarChart2 },
+    { href: "/dashboard/statistiques", label: t.sidebar.statistics, icon: BarChart2 },
   ];
 
   return (
