@@ -24,7 +24,7 @@ export default function Sidebar() {
     { href: "/dashboard/utilisateurs", label: t.sidebar.users, icon: Users },
     { href: "/dashboard/agriculteurs", label: t.sidebar.farmers, icon: Tractor },
     { href: "/dashboard/carte", label: t.sidebar.map, icon: Map },
-    { href: "/emails", label: t.sidebar.emails, icon: Mail },
+    { href: "/dashboard/emails", label: t.sidebar.emails, icon: Mail },
     { href: "/statistiques", label: t.sidebar.statistics, icon: BarChart2 },
   ];
 
