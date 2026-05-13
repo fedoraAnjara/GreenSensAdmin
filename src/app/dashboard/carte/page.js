@@ -17,7 +17,6 @@ import { useLanguage } from "@/context/LanguageContext";
 import { Plus, Edit, Trash2, X, MapPin } from "lucide-react";
 import dynamic from "next/dynamic";
 import toast from "react-hot-toast";
-import "leaflet/dist/leaflet.css";
 
 const Map = dynamic(() => import("@/components/Map"), { ssr: false });
 

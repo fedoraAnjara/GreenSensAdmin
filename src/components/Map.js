@@ -1,83 +1,86 @@
 "use client";
 
-import { useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
-import L from "leaflet";
+import { useState, useCallback } from "react";
+import Map, { Marker, Popup, NavigationControl, FullscreenControl } from "react-map-gl";
 
-// Fix icônes Leaflet avec Next.js
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
-
-// Icônes personnalisées par type
-const icons = {
-  vente: new L.Icon({
-    iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
-    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-  }),
-  cultivation: new L.Icon({
-    iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png",
-    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-  }),
-  elevage: new L.Icon({
-    iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
-    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-  }),
+const MARKER_COLORS = {
+  vente: "#16a34a",
+  cultivation: "#d97706",
+  elevage: "#2563eb",
 };
 
-// Composant pour capturer le clic sur la carte
-function MapClickHandler({ onMapClick }) {
-  useMapEvents({
-    click(e) {
-      onMapClick(e.latlng);
+export default function MapComponent({ points, onMapClick, onMarkerClick }) {
+  const [popupInfo, setPopupInfo] = useState(null);
+
+  const handleClick = useCallback(
+    (e) => {
+      setPopupInfo(null);
+      onMapClick({ lat: e.lngLat.lat, lng: e.lngLat.lng });
     },
-  });
-  return null;
-}
+    [onMapClick]
+  );
 
-export default function Map({ points, onMapClick, onMarkerClick }) {
   return (
-    <MapContainer
-      center={[-18.9137, 47.5361]}
-      zoom={6}
-      style={{ height: "100%", width: "100%" }}
+    <Map
+      mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
+      initialViewState={{
+        longitude: 47.5361,
+        latitude: -18.9137,
+        zoom: 5,
+      }}
+      style={{ width: "100%", height: "100%" }}
+      mapStyle="mapbox://styles/mapbox/streets-v12"
+      onClick={handleClick}
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-
-      <MapClickHandler onMapClick={onMapClick} />
+      <NavigationControl position="top-right" />
+      <FullscreenControl position="top-right" />
 
       {points.map((point) => (
         <Marker
           key={point.id}
-          position={[point.latitude, point.longitude]}
-          icon={icons[point.type] || icons.vente}
-          eventHandlers={{
-            click: () => onMarkerClick(point),
+          longitude={point.longitude}
+          latitude={point.latitude}
+          anchor="bottom"
+          onClick={(e) => {
+            e.originalEvent.stopPropagation();
+            setPopupInfo(point);
+            onMarkerClick(point);
           }}
         >
-          <Popup>
-            <div className="text-sm">
-              <p className="font-semibold">{point.nom}</p>
-              <p className="text-gray-500">{point.adresse}</p>
-            </div>
-          </Popup>
+          <div
+            className="cursor-pointer transition hover:scale-110"
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: "50% 50% 50% 0",
+              backgroundColor: MARKER_COLORS[point.type] || MARKER_COLORS.vente,
+              border: "2px solid white",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+              transform: "rotate(-45deg)",
+            }}
+          />
         </Marker>
       ))}
-    </MapContainer>
+
+      {popupInfo && (
+        <Popup
+          longitude={popupInfo.longitude}
+          latitude={popupInfo.latitude}
+          anchor="top"
+          onClose={() => setPopupInfo(null)}
+          closeOnClick={false}
+        >
+          <div className="p-1 text-sm">
+            <p className="font-semibold text-gray-800">{popupInfo.nom}</p>
+            {popupInfo.adresse && (
+              <p className="text-gray-500 text-xs mt-0.5">{popupInfo.adresse}</p>
+            )}
+            {popupInfo.agriculteurNom && (
+              <p className="text-green-600 text-xs mt-0.5">{popupInfo.agriculteurNom}</p>
+            )}
+          </div>
+        </Popup>
+      )}
+    </Map>
   );
 }
