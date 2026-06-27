@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+sms-worker/node_modules/
+sms-worker/*.json
+!sms-worker/package.json
+sms-worker/get-token.js
