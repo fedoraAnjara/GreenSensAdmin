@@ -101,31 +101,32 @@ async function saveToFirestore(extracted, from, message, env) {
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/publications`;
 
   const document = {
-    fields: {
-      contenu: { stringValue: extracted.description || "" },
-      type: { stringValue: extracted.type || "autre" },
-      produit: extracted.produit
-        ? { stringValue: extracted.produit }
-        : { nullValue: null },
-      quantite: extracted.quantite
-        ? { stringValue: extracted.quantite }
-        : { nullValue: null },
-      prix: extracted.prix
-        ? { doubleValue: extracted.prix }
-        : { nullValue: null },
-      localisation: extracted.localisation
-        ? { stringValue: extracted.localisation }
-        : { nullValue: null },
-      source: { stringValue: "sms" },
-      telephone: { stringValue: from },
-      messageOriginal: { stringValue: message },
-      agriculteurId: { nullValue: null },
-      agriculteurNom: { stringValue: "Agriculteur inconnu" },
-      nomFerme: { nullValue: null },
-      statut: { stringValue: "en_attente" },
-      likes: { arrayValue: { values: [] } },
-    },
-  };
+  fields: {
+    contenu: { stringValue: extracted.description || "" },
+    type: { stringValue: extracted.type || "autre" },
+    produit: extracted.produit
+      ? { stringValue: extracted.produit }
+      : { nullValue: null },
+    quantite: extracted.quantite
+      ? { stringValue: extracted.quantite }
+      : { nullValue: null },
+    prix: extracted.prix
+      ? { doubleValue: extracted.prix }
+      : { nullValue: null },
+    localisation: extracted.localisation
+      ? { stringValue: extracted.localisation }
+      : { nullValue: null },
+    source: { stringValue: "sms" },
+    telephone: { stringValue: from },
+    messageOriginal: { stringValue: message },
+    agriculteurId: { nullValue: null },
+    agriculteurNom: { stringValue: "Agriculteur inconnu" },
+    nomFerme: { nullValue: null },
+    statut: { stringValue: "en_attente" },
+    likes: { arrayValue: { values: [] } },
+    createdAt: { timestampValue: new Date().toISOString() },
+  },
+};
 
   const response = await fetch(url, {
     method: "POST",

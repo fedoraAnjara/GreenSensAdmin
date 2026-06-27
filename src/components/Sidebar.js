@@ -12,6 +12,8 @@ import {
   Mail,
   BarChart2,
   LogOut,
+  MessageSquare,
+
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -25,6 +27,7 @@ export default function Sidebar() {
     { href: "/dashboard/agriculteurs", label: t.sidebar.farmers, icon: Tractor },
     { href: "/dashboard/carte", label: t.sidebar.map, icon: Map },
     { href: "/dashboard/emails", label: t.sidebar.emails, icon: Mail },
+    { href: "/dashboard/publications", label: t.sidebar.publications, icon: MessageSquare },
     { href: "/dashboard/statistiques", label: t.sidebar.statistics, icon: BarChart2 },
   ];
 
@@ -32,10 +35,11 @@ export default function Sidebar() {
     <aside className="h-screen w-64 bg-white border-r border-gray-200 flex flex-col fixed left-0 top-0">
 
       {/* Logo */}
-      <div className="p-6 border-b border-gray-200">
-        <h1 className="text-2xl font-bold text-green-600">GreenSense</h1>
-        <p className="text-xs text-gray-400 mt-0.5">Admin Dashboard</p>
-      </div>
+      <img
+        src="/images/GreenSenseLogo.png"
+        alt="Logo GreenSense"
+        className="h-22 w-auto"
+      />
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">

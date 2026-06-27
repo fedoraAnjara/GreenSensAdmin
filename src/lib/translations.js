@@ -21,6 +21,7 @@ export const translations = {
       emails: "Emails",
       statistics: "Statistiques",
       logout: "Déconnexion",
+      publications: "Publications SMS",
     },
 
     navbar: {
@@ -280,6 +281,36 @@ export const translations = {
       },
       noData: "Pas assez de données",
     },
+    
+    publications: {
+      title: "Publications SMS",
+      subtitle: "Valider les annonces reçues par SMS",
+      pending: "En attente",
+      approved: "Approuvées",
+      rejected: "Rejetées",
+      all: "Toutes",
+      approve: "Approuver",
+      reject: "Rejeter",
+      approveSuccess: "Publication approuvée",
+      rejectSuccess: "Publication rejetée",
+      noData: "Aucune publication",
+      originalSms: "SMS original",
+      extractedInfo: "Informations extraites",
+      farmer: "Agriculteur",
+      phone: "Téléphone",
+      product: "Produit",
+      quantity: "Quantité",
+      price: "Prix",
+      location: "Localisation",
+      type: {
+        vente: "Vente",
+        atelier: "Atelier",
+        promotion: "Promotion",
+        stock: "Stock",
+        autre: "Autre",
+      },
+    },
+
   },
 
   en: {
@@ -304,6 +335,7 @@ export const translations = {
       emails: "Emails",
       statistics: "Statistics",
       logout: "Logout",
+      publications: "SMS Publications",
     },
 
     navbar: {
@@ -562,5 +594,35 @@ export const translations = {
       },
       noData: "Not enough data",
     },
+
+    publications: {
+      title: "SMS Publications",
+      subtitle: "Validate announcements received by SMS",
+      pending: "Pending",
+      approved: "Approved",
+      rejected: "Rejected",
+      all: "All",
+      approve: "Approve",
+      reject: "Reject",
+      approveSuccess: "Publication approved",
+      rejectSuccess: "Publication rejected",
+      noData: "No publications",
+      originalSms: "Original SMS",
+      extractedInfo: "Extracted information",
+      farmer: "Farmer",
+      phone: "Phone",
+      product: "Product",
+      quantity: "Quantity",
+      price: "Price",
+      location: "Location",
+      type: {
+        vente: "Sale",
+        atelier: "Workshop",
+        promotion: "Promotion",
+        stock: "Stock",
+        autre: "Other",
+      },
+    },
+
   },
 };
