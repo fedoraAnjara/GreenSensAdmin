@@ -25,6 +25,8 @@ export const translations = {
 
     navbar: {
       admin: "Administrateur",
+      placeholder: "Rechercher",
+
     },
 
     dashboard: {
@@ -306,6 +308,7 @@ export const translations = {
 
     navbar: {
       admin: "Administrator",
+      placeholder: "Search",
     },
 
     dashboard: {

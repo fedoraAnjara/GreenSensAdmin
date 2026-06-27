@@ -1,0 +1,6 @@
+name = "greensense-sms-webhook"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+FIREBASE_PROJECT_ID = "greensense-e15a0"
