@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
@@ -15,19 +16,29 @@ export default function LoginPage() {
 
   const router = useRouter();
   const { t, language, toggleLanguage } = useLanguage();
-  const { user, loading: authLoading } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    if (!authLoading && user) {
+    if (!authLoading && user && isAdmin) {
       router.push("/dashboard");
     }
-  }, [user, authLoading, router]);
+  }, [user, isAdmin, authLoading, router]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const { user } = await signInWithEmailAndPassword(auth, email, password);
+
+      // Vérifier le rôle admin
+      const userSnap = await getDoc(doc(db, "users", user.uid));
+      if (!userSnap.exists() || userSnap.data().role !== "admin") {
+        await signOut(auth);
+        toast.error("Accès réservé aux administrateurs");
+        setLoading(false);
+        return;
+      }
+
       toast.success(t.login.success);
       router.push("/dashboard");
     } catch (error) {

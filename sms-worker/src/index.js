@@ -96,37 +96,101 @@ Règles:
   return JSON.parse(cleaned);
 }
 
-async function saveToFirestore(extracted, from, message, env) {
+async function findAgriculteurByPhone(phone, env) {
+  const projectId = env.FIREBASE_PROJECT_ID;
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
+
+  const queryBody = {
+    structuredQuery: {
+      from: [{ collectionId: "users" }],
+      where: {
+        compositeFilter: {
+          op: "AND",
+          filters: [
+            {
+              fieldFilter: {
+                field: { fieldPath: "role" },
+                op: "EQUAL",
+                value: { stringValue: "agriculteur" },
+              },
+            },
+            {
+              fieldFilter: {
+                field: { fieldPath: "telephone" },
+                op: "EQUAL",
+                value: { stringValue: phone },
+              },
+            },
+          ],
+        },
+      },
+      limit: 1,
+    },
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(queryBody),
+  });
+
+  if (!response.ok) {
+    console.error("Erreur recherche agriculteur");
+    return null;
+  }
+
+  const results = await response.json();
+
+  for (const result of results) {
+    if (result.document) {
+      const fields = result.document.fields;
+      const docId = result.document.name.split("/").pop();
+      return {
+        id: docId,
+        nom: fields.nom?.stringValue || "Agriculteur",
+        nomFerme: fields.nomFerme?.stringValue || null,
+      };
+    }
+  }
+
+  return null;
+}
+
+async function saveToFirestore(extracted, from, message, env, agriculteur) {
   const projectId = env.FIREBASE_PROJECT_ID;
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/publications`;
 
   const document = {
-  fields: {
-    contenu: { stringValue: extracted.description || "" },
-    type: { stringValue: extracted.type || "autre" },
-    produit: extracted.produit
-      ? { stringValue: extracted.produit }
-      : { nullValue: null },
-    quantite: extracted.quantite
-      ? { stringValue: extracted.quantite }
-      : { nullValue: null },
-    prix: extracted.prix
-      ? { doubleValue: extracted.prix }
-      : { nullValue: null },
-    localisation: extracted.localisation
-      ? { stringValue: extracted.localisation }
-      : { nullValue: null },
-    source: { stringValue: "sms" },
-    telephone: { stringValue: from },
-    messageOriginal: { stringValue: message },
-    agriculteurId: { nullValue: null },
-    agriculteurNom: { stringValue: "Agriculteur inconnu" },
-    nomFerme: { nullValue: null },
-    statut: { stringValue: "en_attente" },
-    likes: { arrayValue: { values: [] } },
-    createdAt: { timestampValue: new Date().toISOString() },
-  },
-};
+    fields: {
+      contenu: { stringValue: extracted.description || "" },
+      type: { stringValue: extracted.type || "autre" },
+      produit: extracted.produit
+        ? { stringValue: extracted.produit }
+        : { nullValue: null },
+      quantite: extracted.quantite
+        ? { stringValue: extracted.quantite }
+        : { nullValue: null },
+      prix: extracted.prix
+        ? { doubleValue: extracted.prix }
+        : { nullValue: null },
+      localisation: extracted.localisation
+        ? { stringValue: extracted.localisation }
+        : { nullValue: null },
+      source: { stringValue: "sms" },
+      telephone: { stringValue: from },
+      messageOriginal: { stringValue: message },
+      agriculteurId: agriculteur?.id
+        ? { stringValue: agriculteur.id }
+        : { nullValue: null },
+      agriculteurNom: { stringValue: agriculteur?.nom || "Agriculteur inconnu" },
+      nomFerme: agriculteur?.nomFerme
+        ? { stringValue: agriculteur.nomFerme }
+        : { nullValue: null },
+      statut: { stringValue: "en_attente" },
+      likes: { arrayValue: { values: [] } },
+      createdAt: { timestampValue: new Date().toISOString() },
+    },
+  };
 
   const response = await fetch(url, {
     method: "POST",
@@ -185,6 +249,10 @@ export default {
 
       console.log(`SMS reçu de ${from}: ${message}`);
 
+      // Chercher l'agriculteur par numéro
+      const agriculteur = await findAgriculteurByPhone(from, env);
+      console.log("Agriculteur trouvé:", agriculteur);
+
       // Extraire les infos avec Gemini
       const extracted = await extractSmsInfo(message, env.GEMINI_API_KEY);
 
@@ -196,8 +264,8 @@ export default {
         );
       }
 
-      // Sauvegarder dans Firestore
-      await saveToFirestore(extracted, from, message, env);
+      // Sauvegarder dans Firestore avec l'agriculteur
+      await saveToFirestore(extracted, from, message, env, agriculteur);
 
       console.log(`Publication créée depuis ${from}`);
       return new Response(
