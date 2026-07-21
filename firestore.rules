@@ -1,0 +1,68 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Vérifie que l'utilisateur connecté possède le rôle "admin"
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Vérifie simplement que l'utilisateur est authentifié
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // --- Comptes utilisateurs ---
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      // Liste restreinte : admin, ou requête filtrée sur les agriculteurs (passerelle SMS)
+      allow list: if isAdmin() || (resource.data.role == 'agriculteur');
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+
+      // Sous-collections privées : profil de santé, conversations, menus
+      match /{subcollection}/{docId} {
+        allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+        allow write: if isSignedIn() && request.auth.uid == userId;
+      }
+    }
+
+    // --- Publications issues des SMS ---
+    match /publications/{pubId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+
+    // --- Points de vente géolocalisés ---
+    match /pointsDeVente/{pointId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // --- Fiches des producteurs et leurs produits ---
+    match /agriculteurs/{agriId} {
+      allow read: if true;
+      allow write: if isAdmin();
+
+      match /produits/{prodId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+    }
+
+    match /produits/{prodId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // --- Historique des emails (admin uniquement) ---
+    match /emailHistory/{emailId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
