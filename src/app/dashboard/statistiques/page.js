@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useLanguage } from "@/context/LanguageContext";
-import { Users, Tractor, ShoppingBasket, Salad, MapPin, Mail } from "lucide-react";
+import { MessageSquare, CheckCircle, Clock, Heart, HeartPulse, Bot } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -12,20 +12,21 @@ import {
 
 export default function StatistiquesPage() {
   const { t } = useLanguage();
+  const ts = t.statistics;
 
   const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalFarmers: 0,
-    totalProducts: 0,
-    totalRecommendations: 0,
-    totalPoints: 0,
-    emailsSent: 0,
+    totalPublications: 0,
+    approved: 0,
+    pending: 0,
+    totalLikes: 0,
+    healthProfiles: 0,
+    conversations: 0,
   });
 
-  const [usersByMonth, setUsersByMonth] = useState([]);
-  const [usersByRole, setUsersByRole] = useState([]);
-  const [farmersByStatus, setFarmersByStatus] = useState([]);
-  const [pointsByType, setPointsByType] = useState([]);
+  const [pubsByMonth, setPubsByMonth] = useState([]);
+  const [pubsByStatus, setPubsByStatus] = useState([]);
+  const [pubsByType, setPubsByType] = useState([]);
+  const [topProducts, setTopProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const COLORS = {
@@ -40,76 +41,93 @@ export default function StatistiquesPage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Collections
-        const usersSnap = await getDocs(
-          query(collection(db, "users"), where("role", "==", "consommateur"))
-        );
-        const farmersSnap = await getDocs(
-          query(collection(db, "users"), where("role", "==", "agriculteur"))
-        );
-        const productsSnap = await getDocs(collection(db, "produits"));
-        const recommSnap = await getDocs(collection(db, "recommandations"));
-        const pointsSnap = await getDocs(collection(db, "pointsDeVente"));
-        const emailsSnap = await getDocs(collection(db, "emailHistory"));
+        // --- PUBLICATIONS ---
+        const pubSnap = await getDocs(collection(db, "publications"));
+        const pubs = pubSnap.docs.map((d) => d.data());
 
-        // Stats globales
-        setStats({
-          totalUsers: usersSnap.size,
-          totalFarmers: farmersSnap.size,
-          totalProducts: productsSnap.size,
-          totalRecommendations: recommSnap.size,
-          totalPoints: pointsSnap.size,
-          emailsSent: emailsSnap.size,
-        });
+        const totalPublications = pubs.length;
+        const approved = pubs.filter((p) => p.statut === "approuve").length;
+        const pending = pubs.filter((p) => p.statut === "en_attente").length;
+        const rejected = pubs.filter((p) => p.statut === "rejete").length;
+        const totalLikes = pubs.reduce((sum, p) => sum + (p.likes?.length || 0), 0);
 
-        // Inscriptions par mois (utilisateurs + agriculteurs)
-        const allUsers = [
-          ...usersSnap.docs.map((d) => d.data()),
-          ...farmersSnap.docs.map((d) => d.data()),
-        ];
+        // Publications par mois
         const monthKeys = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
         const monthCounts = Array(12).fill(0);
-        allUsers.forEach((u) => {
-          if (u.createdAt) {
-            const date = u.createdAt.toDate?.() ?? new Date(u.createdAt);
+        pubs.forEach((p) => {
+          if (p.createdAt) {
+            const date = p.createdAt.toDate?.() ?? new Date(p.createdAt);
             monthCounts[date.getMonth()]++;
           }
         });
-        setUsersByMonth(
+        setPubsByMonth(
           monthKeys.map((key, i) => ({
-            month: t.statistics.months[key],
-            inscriptions: monthCounts[i],
+            month: ts.months[key],
+            publications: monthCounts[i],
           }))
         );
 
-        // Répartition par rôle
-        setUsersByRole([
-          { name: t.statistics.roles.consommateur, value: usersSnap.size, color: COLORS.blue },
-          { name: t.statistics.roles.agriculteur, value: farmersSnap.size, color: COLORS.green },
+        // Publications par statut
+        setPubsByStatus([
+          { name: ts.status.approved, value: approved, color: COLORS.green },
+          { name: ts.status.pending, value: pending, color: COLORS.amber },
+          { name: ts.status.rejected, value: rejected, color: COLORS.red },
         ]);
 
-        // Agriculteurs par statut
-        const farmers = farmersSnap.docs.map((d) => d.data());
-        const approved = farmers.filter((f) => f.farmerStatus === "approved").length;
-        const pending = farmers.filter((f) => !f.farmerStatus || f.farmerStatus === "pending").length;
-        const suspended = farmers.filter((f) => f.farmerStatus === "suspended").length;
-        setFarmersByStatus([
-          { name: t.statistics.farmerStatus.approved, value: approved, color: COLORS.green },
-          { name: t.statistics.farmerStatus.pending, value: pending, color: COLORS.amber },
-          { name: t.statistics.farmerStatus.suspended, value: suspended, color: COLORS.red },
-        ]);
+        // Publications par type
+        const typeKeys = ["vente", "atelier", "promotion", "stock", "autre"];
+        const typeColors = [COLORS.green, COLORS.blue, COLORS.purple, COLORS.amber, COLORS.teal];
+        setPubsByType(
+          typeKeys.map((key, i) => ({
+            name: ts.types[key],
+            value: pubs.filter((p) => p.type === key).length,
+            color: typeColors[i],
+          })).filter((entry) => entry.value > 0)
+        );
 
-        // Points par type
-        const points = pointsSnap.docs.map((d) => d.data());
-        const vente = points.filter((p) => p.type === "vente").length;
-        const cultivation = points.filter((p) => p.type === "cultivation").length;
-        const elevage = points.filter((p) => p.type === "elevage").length;
-        setPointsByType([
-          { name: t.statistics.pointTypes.vente, value: vente, color: COLORS.green },
-          { name: t.statistics.pointTypes.cultivation, value: cultivation, color: COLORS.amber },
-          { name: t.statistics.pointTypes.elevage, value: elevage, color: COLORS.blue },
-        ]);
+        // Top produits annoncés
+        const productCounts = {};
+        pubs.forEach((p) => {
+          if (p.produit) {
+            const key = p.produit.trim();
+            if (key) productCounts[key] = (productCounts[key] || 0) + 1;
+          }
+        });
+        const topProds = Object.entries(productCounts)
+          .map(([name, count]) => ({ name, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5);
+        setTopProducts(topProds);
 
+        // --- ENGAGEMENT CONSOMMATEUR ---
+        const usersSnap = await getDocs(
+          query(collection(db, "users"), where("role", "==", "consommateur"))
+        );
+        const consumers = usersSnap.docs;
+
+        let healthProfiles = 0;
+        let conversations = 0;
+        await Promise.all(
+          consumers.map(async (c) => {
+            try {
+              const hp = await getDoc(doc(db, "users", c.id, "profilSante", "data"));
+              if (hp.exists()) healthProfiles++;
+            } catch (e) {}
+            try {
+              const conv = await getDocs(collection(db, "users", c.id, "conversations"));
+              conversations += conv.size;
+            } catch (e) {}
+          })
+        );
+
+        setStats({
+          totalPublications,
+          approved,
+          pending,
+          totalLikes,
+          healthProfiles,
+          conversations,
+        });
       } catch (error) {
         console.error(error);
       } finally {
@@ -121,18 +139,18 @@ export default function StatistiquesPage() {
   }, []);
 
   const statCards = [
-    { label: t.statistics.cards.totalUsers, value: stats.totalUsers, icon: Users, color: "bg-blue-50 text-blue-600", border: "border-blue-100" },
-    { label: t.statistics.cards.totalFarmers, value: stats.totalFarmers, icon: Tractor, color: "bg-green-50 text-green-600", border: "border-green-100" },
-    { label: t.statistics.cards.totalProducts, value: stats.totalProducts, icon: ShoppingBasket, color: "bg-amber-50 text-amber-600", border: "border-amber-100" },
-    { label: t.statistics.cards.totalRecommendations, value: stats.totalRecommendations, icon: Salad, color: "bg-purple-50 text-purple-600", border: "border-purple-100" },
-    { label: t.statistics.cards.totalPoints, value: stats.totalPoints, icon: MapPin, color: "bg-teal-50 text-teal-600", border: "border-teal-100" },
-    { label: t.statistics.cards.emailsSent, value: stats.emailsSent, icon: Mail, color: "bg-red-50 text-red-600", border: "border-red-100" },
+    { label: ts.cards.totalPublications, value: stats.totalPublications, icon: MessageSquare, color: "bg-green-50 text-green-600", border: "border-green-100" },
+    { label: ts.cards.approved, value: stats.approved, icon: CheckCircle, color: "bg-emerald-50 text-emerald-600", border: "border-emerald-100" },
+    { label: ts.cards.pending, value: stats.pending, icon: Clock, color: "bg-amber-50 text-amber-600", border: "border-amber-100" },
+    { label: ts.cards.totalLikes, value: stats.totalLikes, icon: Heart, color: "bg-red-50 text-red-600", border: "border-red-100" },
+    { label: ts.cards.healthProfiles, value: stats.healthProfiles, icon: HeartPulse, color: "bg-blue-50 text-blue-600", border: "border-blue-100" },
+    { label: ts.cards.conversations, value: stats.conversations, icon: Bot, color: "bg-purple-50 text-purple-600", border: "border-purple-100" },
   ];
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-green-600 font-medium">Chargement...</div>
+        <div className="text-green-600 font-medium">{t.common?.loading || "Chargement..."}</div>
       </div>
     );
   }
@@ -142,8 +160,8 @@ export default function StatistiquesPage() {
 
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-800">{t.statistics.title}</h2>
-        <p className="text-gray-500 mt-1">{t.statistics.subtitle}</p>
+        <h2 className="text-2xl font-bold text-gray-800">{ts.title}</h2>
+        <p className="text-gray-500 mt-1">{ts.subtitle}</p>
       </div>
 
       {/* Cards */}
@@ -167,30 +185,30 @@ export default function StatistiquesPage() {
       {/* Graphiques */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        {/* Inscriptions par mois */}
+        {/* Publications par mois */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h3 className="font-semibold text-gray-800 mb-4">{t.statistics.charts.usersByMonth}</h3>
+          <h3 className="font-semibold text-gray-800 mb-4">{ts.charts.pubsByMonth}</h3>
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={usersByMonth}>
+            <BarChart data={pubsByMonth}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="month" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
               <Tooltip />
-              <Bar dataKey="inscriptions" fill={COLORS.green} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="publications" fill={COLORS.green} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Répartition par rôle */}
+        {/* Publications par statut */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h3 className="font-semibold text-gray-800 mb-4">{t.statistics.charts.usersByRole}</h3>
-          {stats.totalUsers + stats.totalFarmers === 0 ? (
-            <p className="text-sm text-gray-400 text-center mt-16">{t.statistics.noData}</p>
+          <h3 className="font-semibold text-gray-800 mb-4">{ts.charts.pubsByStatus}</h3>
+          {stats.totalPublications === 0 ? (
+            <p className="text-sm text-gray-400 text-center mt-16">{ts.noData}</p>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie
-                  data={usersByRole}
+                  data={pubsByStatus}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
@@ -198,7 +216,7 @@ export default function StatistiquesPage() {
                   paddingAngle={4}
                   dataKey="value"
                 >
-                  {usersByRole.map((entry, index) => (
+                  {pubsByStatus.map((entry, index) => (
                     <Cell key={index} fill={entry.color} />
                   ))}
                 </Pie>
@@ -209,16 +227,16 @@ export default function StatistiquesPage() {
           )}
         </div>
 
-        {/* Agriculteurs par statut */}
+        {/* Publications par type */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h3 className="font-semibold text-gray-800 mb-4">{t.statistics.charts.farmersByStatus}</h3>
-          {stats.totalFarmers === 0 ? (
-            <p className="text-sm text-gray-400 text-center mt-16">{t.statistics.noData}</p>
+          <h3 className="font-semibold text-gray-800 mb-4">{ts.charts.pubsByType}</h3>
+          {pubsByType.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center mt-16">{ts.noData}</p>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie
-                  data={farmersByStatus}
+                  data={pubsByType}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
@@ -226,7 +244,7 @@ export default function StatistiquesPage() {
                   paddingAngle={4}
                   dataKey="value"
                 >
-                  {farmersByStatus.map((entry, index) => (
+                  {pubsByType.map((entry, index) => (
                     <Cell key={index} fill={entry.color} />
                   ))}
                 </Pie>
@@ -237,30 +255,20 @@ export default function StatistiquesPage() {
           )}
         </div>
 
-        {/* Points par type */}
+        {/* Top produits annoncés */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h3 className="font-semibold text-gray-800 mb-4">{t.statistics.charts.pointsByType}</h3>
-          {stats.totalPoints === 0 ? (
-            <p className="text-sm text-gray-400 text-center mt-16">{t.statistics.noData}</p>
+          <h3 className="font-semibold text-gray-800 mb-4">{ts.charts.topProducts}</h3>
+          {topProducts.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center mt-16">{ts.noData}</p>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie
-                  data={pointsByType}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={4}
-                  dataKey="value"
-                >
-                  {pointsByType.map((entry, index) => (
-                    <Cell key={index} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Legend />
+              <BarChart data={topProducts} layout="vertical" margin={{ left: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={90} />
                 <Tooltip />
-              </PieChart>
+                <Bar dataKey="count" fill={COLORS.teal} radius={[0, 4, 4, 0]} />
+              </BarChart>
             </ResponsiveContainer>
           )}
         </div>
