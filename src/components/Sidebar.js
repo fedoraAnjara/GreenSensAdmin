@@ -13,7 +13,7 @@ import {
   BarChart2,
   LogOut,
   MessageSquare,
-
+  Shield,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -29,6 +29,7 @@ export default function Sidebar() {
     { href: "/dashboard/emails", label: t.sidebar.emails, icon: Mail },
     { href: "/dashboard/publications", label: t.sidebar.publications, icon: MessageSquare },
     { href: "/dashboard/statistiques", label: t.sidebar.statistics, icon: BarChart2 },
+    { href: "/dashboard/admins", label: t.sidebar.admins, icon: Shield },
   ];
 
   return (
@@ -38,7 +39,7 @@ export default function Sidebar() {
       <img
         src="/images/GreenSenseLogo.png"
         alt="Logo GreenSense"
-        className="h-22 w-auto"
+        className="h-24 w-auto"
       />
 
       {/* Navigation */}
