@@ -76,16 +76,31 @@ Règles:
 - valide = false si c'est une conversation normale, une question, un message personnel
 - Reformule la description en français correct même si le SMS est en malgache ou en franglais`;
 
-  const response = await fetch(GEMINI_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.3, maxOutputTokens: 512 },
-    }),
-  });
+  let response;
+  const maxRetries = 3;
 
-  if (!response.ok) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    response = await fetch(GEMINI_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 1024,
+          responseMimeType: "application/json",
+        },
+      }),
+    });
+
+    if (response.ok) break;
+
+    // 503 (surcharge) ou 429 (trop de requêtes) : on patiente et on réessaie
+    if ((response.status === 503 || response.status === 429) && attempt < maxRetries) {
+      await new Promise((r) => setTimeout(r, attempt * 1500));
+      continue;
+    }
+
     const error = await response.json();
     throw new Error(`Gemini error: ${JSON.stringify(error)}`);
   }
@@ -93,7 +108,13 @@ Règles:
   const data = await response.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
   const cleaned = text.replace(/```json|```/g, "").trim();
-  return JSON.parse(cleaned);
+
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    console.error("JSON Gemini invalide:", cleaned);
+    throw new Error("Réponse IA mal formée");
+  }
 }
 
 async function findAgriculteurByPhone(phone, env) {
