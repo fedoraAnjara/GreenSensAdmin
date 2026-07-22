@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import Map, { Marker, Popup, NavigationControl, FullscreenControl } from "react-map-gl";
 
 const MARKER_COLORS = {
@@ -9,8 +9,21 @@ const MARKER_COLORS = {
   elevage: "#2563eb",
 };
 
-export default function MapComponent({ points, onMapClick, onMarkerClick }) {
+export default function MapComponent({ points, onMapClick, onMarkerClick, flyTo }) {
   const [popupInfo, setPopupInfo] = useState(null);
+  const mapRef = useRef(null);
+
+  // Recentre la carte quand une recherche de lieu aboutit
+  useEffect(() => {
+    if (flyTo?.lat != null && flyTo?.lng != null && mapRef.current) {
+      mapRef.current.flyTo({
+        center: [flyTo.lng, flyTo.lat],
+        zoom: flyTo.zoom ?? 12,
+        duration: 1500,
+        essential: true,
+      });
+    }
+  }, [flyTo]);
 
   const handleClick = useCallback(
     (e) => {
@@ -22,6 +35,7 @@ export default function MapComponent({ points, onMapClick, onMarkerClick }) {
 
   return (
     <Map
+      ref={mapRef}
       mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
       initialViewState={{
         longitude: 47.5361,
