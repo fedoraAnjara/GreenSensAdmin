@@ -170,6 +170,7 @@ async function findAgriculteurByPhone(phone, env) {
         id: docId,
         nom: fields.nom?.stringValue || "Agriculteur",
         nomFerme: fields.nomFerme?.stringValue || null,
+        farmerStatus: fields.farmerStatus?.stringValue || "pending",
       };
     }
   }
@@ -273,6 +274,15 @@ export default {
       // Chercher l'agriculteur par numéro
       const agriculteur = await findAgriculteurByPhone(from, env);
       console.log("Agriculteur trouvé:", agriculteur);
+
+      // Un producteur suspendu ne peut plus publier
+      if (agriculteur?.farmerStatus === "suspended") {
+        console.log(`SMS ignoré : agriculteur suspendu (${from})`);
+        return new Response(
+          JSON.stringify({ status: "ignored", reason: "farmer_suspended" }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
 
       // Extraire les infos avec Gemini
       const extracted = await extractSmsInfo(message, env.GEMINI_API_KEY);
