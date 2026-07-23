@@ -12,9 +12,11 @@ export default function DashboardPage() {
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalFarmers: 0,
-    totalProducts: 0,
-    totalRecommendations: 0,
+    totalPoints: 0,
+    totalPublications: 0,
   });
+
+  const [pubStats, setPubStats] = useState({ total: 0, approved: 0, pending: 0, likes: 0 });
 
   const [recentUsers, setRecentUsers] = useState([]);
   const [recentFarmers, setRecentFarmers] = useState([]);
@@ -25,14 +27,23 @@ export default function DashboardPage() {
       try {
         const usersSnap = await getDocs(query(collection(db, "users"), where("role", "==", "consommateur")));
         const farmersSnap = await getDocs(query(collection(db, "users"), where("role", "==", "agriculteur")));
-        const productsSnap = await getDocs(collection(db, "produits"));
-        const recommSnap = await getDocs(collection(db, "recommandations"));
+        const pointsSnap = await getDocs(collection(db, "pointsDeVente"));
+        const pubSnap = await getDocs(collection(db, "publications"));
+
+        const pubs = pubSnap.docs.map((d) => d.data());
 
         setStats({
           totalUsers: usersSnap.size,
           totalFarmers: farmersSnap.size,
-          totalProducts: productsSnap.size,
-          totalRecommendations: recommSnap.size,
+          totalPoints: pointsSnap.size,
+          totalPublications: pubSnap.size,
+        });
+
+        setPubStats({
+          total: pubs.length,
+          approved: pubs.filter((p) => p.statut === "approuve").length,
+          pending: pubs.filter((p) => p.statut === "en_attente").length,
+          likes: pubs.reduce((sum, p) => sum + (p.likes?.length || 0), 0),
         });
 
         const recentUsersSnap = await getDocs(
@@ -58,10 +69,8 @@ export default function DashboardPage() {
     {
       label: t.dashboard.stats.totalUsers,
       value: stats.totalUsers,
-      delta: "+12 ce mois",
       accent: "bg-blue-500",
       iconColor: "text-blue-500",
-      deltaStyle: "bg-blue-50 text-blue-700",
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
@@ -72,10 +81,8 @@ export default function DashboardPage() {
     {
       label: t.dashboard.stats.totalFarmers,
       value: stats.totalFarmers,
-      delta: "+5 ce mois",
       accent: "bg-green-500",
       iconColor: "text-green-600",
-      deltaStyle: "bg-green-50 text-green-700",
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
@@ -84,30 +91,25 @@ export default function DashboardPage() {
       ),
     },
     {
-      label: t.dashboard.stats.totalProducts,
-      value: stats.totalProducts,
-      delta: "+34 ce mois",
+      label: t.dashboard.stats.totalPoints || "Points de vente",
+      value: stats.totalPoints,
       accent: "bg-amber-500",
       iconColor: "text-amber-600",
-      deltaStyle: "bg-amber-50 text-amber-700",
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/>
-          <path d="M16 10a4 4 0 0 1-8 0"/>
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+          <circle cx="12" cy="10" r="3"/>
         </svg>
       ),
     },
     {
-      label: t.dashboard.stats.totalRecommendations,
-      value: stats.totalRecommendations,
-      delta: "+211 ce mois",
+      label: t.dashboard.stats.totalPublications || "Publications",
+      value: stats.totalPublications,
       accent: "bg-purple-500",
       iconColor: "text-purple-600",
-      deltaStyle: "bg-purple-50 text-purple-700",
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 8v4l3 3"/>
-          <path d="M18 2v4h4"/>
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
         </svg>
       ),
     },
@@ -141,19 +143,30 @@ export default function DashboardPage() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map(({ label, value, delta, accent, iconColor, deltaStyle, icon }) => (
-          <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className={`h-1 w-full ${accent}`} />
-            <div className="p-5">
-              <div className={`mb-3 ${iconColor}`}>{icon}</div>
-              <p className="text-3xl font-bold text-gray-900">{value.toLocaleString()}</p>
-              <p className="text-sm text-gray-500 mt-1">{label}</p>
-              <span className={`inline-flex items-center gap-1 text-xs font-medium mt-3 px-2.5 py-1 rounded-full ${deltaStyle}`}>
-                ↑ {delta}
-              </span>
+        {statCards.map(({ label, value, accent, iconColor, icon }) => {
+          const total =
+            stats.totalUsers + stats.totalFarmers + stats.totalPoints + stats.totalPublications;
+          const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+          return (
+            <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className={`h-1 w-full ${accent}`} />
+              <div className="p-5">
+                <div className={`mb-3 ${iconColor}`}>{icon}</div>
+                <p className="text-3xl font-bold text-gray-900">{value.toLocaleString()}</p>
+                <p className="text-sm text-gray-500 mt-1">{label}</p>
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs text-gray-400">Part du total</span>
+                    <span className="text-xs font-semibold text-gray-600">{pct}%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                    <div className={`h-full ${accent} rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Tables */}
@@ -228,6 +241,38 @@ export default function DashboardPage() {
         </div>
 
       </div>
+
+      {/* Aperçu Statistiques */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-purple-500" />
+            Aperçu des publications
+          </h3>
+          <Link href="/dashboard/statistiques" className="text-xs text-green-600 hover:underline flex items-center gap-1">
+            Statistiques détaillées →
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-gray-50">
+          <div className="p-5 text-center">
+            <p className="text-2xl font-bold text-gray-900">{pubStats.total}</p>
+            <p className="text-xs text-gray-500 mt-1">Publications</p>
+          </div>
+          <div className="p-5 text-center">
+            <p className="text-2xl font-bold text-emerald-600">{pubStats.approved}</p>
+            <p className="text-xs text-gray-500 mt-1">Approuvées</p>
+          </div>
+          <div className="p-5 text-center">
+            <p className="text-2xl font-bold text-amber-600">{pubStats.pending}</p>
+            <p className="text-xs text-gray-500 mt-1">En attente</p>
+          </div>
+          <div className="p-5 text-center">
+            <p className="text-2xl font-bold text-red-500">{pubStats.likes}</p>
+            <p className="text-xs text-gray-500 mt-1">J'aime au total</p>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }

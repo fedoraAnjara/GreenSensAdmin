@@ -44,3 +44,4 @@ sms-worker/node_modules/
 sms-worker/*.json
 !sms-worker/package.json
 sms-worker/get-token.js
+.vercel
